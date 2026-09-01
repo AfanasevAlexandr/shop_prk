@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Каталог</title>
+<link rel="stylesheet" href="css/styles.css" />
+<!-- Telegram Web App JS API -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+
+  <!-- Шапка -->
+  <header class="header">
+    <div class="header__titles">
+      <h1 class="header__title" id="shop-name">Магазин</h1>
+      <p class="header__subtitle" id="welcome-text" hidden></p>
+    </div>
+    <button class="lang-switch" id="lang-switch" type="button" aria-label="Switch language">RU</button>
+  </header>
+
+  <!-- Поиск -->
+  <div class="search-bar">
+    <input
+      type="search"
+      id="search-input"
+      class="search-input"
+      data-i18n-placeholder="search_placeholder"
+      placeholder="Поиск товаров..."
+    />
+  </div>
+
+  <!-- Категории верхнего уровня -->
+  <nav class="chips-row" id="categories-top" aria-label="Категории"></nav>
+
+  <!-- Подкатегории выбранной категории (появляются динамически) -->
+  <nav class="chips-row chips-row--sub" id="categories-sub" aria-label="Подкатегории" hidden></nav>
+
+  <!-- Состояние загрузки -->
+  <div class="state-message" id="loading-state">
+    <div class="spinner"></div>
+    <p data-i18n="loading">Загружаем каталог...</p>
+  </div>
+
+  <!-- Состояние ошибки -->
+  <div class="state-message" id="error-state" hidden>
+    <p data-i18n="load_error">Не удалось загрузить каталог.</p>
+    <button class="btn btn--secondary" id="retry-btn" data-i18n="retry">Повторить</button>
+  </div>
+
+  <!-- Пустой результат -->
+  <div class="state-message" id="empty-state" hidden>
+    <p data-i18n="nothing_found">Ничего не найдено</p>
+  </div>
+
+  <!-- Сетка товаров -->
+  <main class="product-grid" id="product-grid" hidden></main>
+
+  <!-- Плавающая кнопка корзины -->
+  <button class="cart-bar" id="cart-bar" type="button" hidden>
+    <span class="cart-bar__count" id="cart-bar-count">0</span>
+    <span class="cart-bar__label" data-i18n="cart_open">Корзина</span>
+    <span class="cart-bar__total" id="cart-bar-total">0</span>
+  </button>
+
+  <!-- ===================== Модалка: Корзина ===================== -->
+  <div class="sheet-overlay" id="cart-overlay" hidden>
+    <div class="sheet" id="cart-sheet" role="dialog" aria-modal="true">
+      <div class="sheet__header">
+        <h2 data-i18n="cart_title">Корзина</h2>
+        <button class="sheet__close" id="cart-close" type="button" aria-label="Close">✕</button>
+      </div>
+
+      <div class="sheet__body" id="cart-items"></div>
+
+      <div class="state-message state-message--compact" id="cart-empty-state" hidden>
+        <p data-i18n="cart_empty">Корзина пуста</p>
+      </div>
+
+      <div class="sheet__footer" id="cart-footer">
+        <div class="sheet__total">
+          <span data-i18n="total">Итого</span>
+          <strong id="cart-total-amount">0</strong>
+        </div>
+        <button class="btn btn--primary btn--block" id="go-to-checkout" data-i18n="checkout_button">
+          Оформить заказ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== Модалка: Оформление заказа ===================== -->
+  <div class="sheet-overlay" id="checkout-overlay" hidden>
+    <div class="sheet" id="checkout-sheet" role="dialog" aria-modal="true">
+      <div class="sheet__header">
+        <button class="sheet__back" id="checkout-back" type="button" aria-label="Back">←</button>
+        <h2 data-i18n="checkout_title">Оформление заказа</h2>
+        <button class="sheet__close" id="checkout-close" type="button" aria-label="Close">✕</button>
+      </div>
+
+      <form class="sheet__body checkout-form" id="checkout-form">
+        <label class="field">
+          <span data-i18n="field_name">Ваше имя</span>
+          <input type="text" name="name" id="field-name" required autocomplete="name" />
+        </label>
+
+        <label class="field">
+          <span data-i18n="field_phone">Номер телефона</span>
+          <input type="tel" name="phone" id="field-phone" required autocomplete="tel" />
+        </label>
+
+        <label class="field">
+          <span data-i18n="field_comment">Комментарий к заказу (необязательно)</span>
+          <textarea name="comment" id="field-comment" rows="3"></textarea>
+        </label>
+
+        <div class="checkout-summary" id="checkout-summary"></div>
+      </form>
+
+      <div class="sheet__footer">
+        <div class="sheet__total">
+          <span data-i18n="total">Итого</span>
+          <strong id="checkout-total-amount">0</strong>
+        </div>
+        <button class="btn btn--primary btn--block" id="submit-order-btn" type="submit" form="checkout-form" data-i18n="submit_order">
+          Подтвердить заказ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== Модалка: Успех ===================== -->
+  <div class="sheet-overlay" id="success-overlay" hidden>
+    <div class="sheet sheet--success" role="dialog" aria-modal="true">
+      <div class="success-icon">✓</div>
+      <h2 data-i18n="success_title">Заказ отправлен</h2>
+      <p data-i18n="success_text">Менеджер скоро свяжется с вами для подтверждения заказа.</p>
+      <p class="success-contact" id="success-contact" hidden></p>
+      <button class="btn btn--primary" id="success-close" data-i18n="success_close">Готово</button>
+    </div>
+  </div>
+
+  <!-- Карточка товара (детальный просмотр) -->
+  <div class="sheet-overlay" id="product-overlay" hidden>
+    <div class="sheet" id="product-sheet" role="dialog" aria-modal="true">
+      <div class="sheet__header">
+        <button class="sheet__back" id="product-close" type="button" aria-label="Back">←</button>
+      </div>
+      <div class="sheet__body" id="product-detail"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
