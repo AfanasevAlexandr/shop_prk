@@ -13,7 +13,7 @@ export const CONFIG = {
   // Пока пустой — сценарий Make настроим на следующем шаге.
   // Пока это поле пустое, отправка заказа работает в тестовом режиме
   // (см. js/api.js -> submitOrder).
-  ORDER_WEBHOOK_URL: 'https://hook.eu1.make.com/yrkb5n14aabh1njb96gltqgybxu3wq0o',
+  ORDER_WEBHOOK_URL: 'https://hook.eu1.make.com/x2kfh9w78arc0rbex1vh3pwsyqfw6whv',
 
   // Сколько миллисекунд хранить каталог в кэше браузера (localStorage),
   // чтобы не дёргать Apps Script при каждом открытии приложения.
@@ -37,7 +37,7 @@ export const CONFIG = {
 
 
   // Используется, если в листе Settings не задан currency_symbol.
-  DEFAULT_CURRENCY_SYMBOL: 'RSD',
+  DEFAULT_CURRENCY_SYMBOL: 'rsd',
 
   // Ключи localStorage.
   STORAGE_KEYS: {
