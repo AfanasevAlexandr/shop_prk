@@ -5,18 +5,11 @@
 // ============================================================
 
 export const CONFIG = {
-  // URL Web App из Apps Script (файл Code.gs), отдающий JSON каталога.
-  // Пример: 'https://script.google.com/macros/s/AKfycb.../exec'
-  CATALOG_API_URL: 'https://script.google.com/macros/s/AKfycbzod7Yub4l9eC-oUJcTY8slVlBqEu5NLB-h4BmnBDk0Yl26PXaUXPJw1R0EI95fgohb/exec',
 
-  // URL вебхука Make, который будет принимать оформленные заказы.
-  // Пока пустой — сценарий Make настроим на следующем шаге.
-  // Пока это поле пустое, отправка заказа работает в тестовом режиме
-  // (см. js/api.js -> submitOrder).
+  CATALOG_API_URL: 'https://script.google.com/macros/s/AKfycbw4vFMKhuU-Vr11d01iTCGfD2ahw-67pgIkPN5nPOdLdI4THmE5CfEeNFfkJOIWEck/exec',
+
   ORDER_WEBHOOK_URL: 'https://hook.eu1.make.com/x2kfh9w78arc0rbex1vh3pwsyqfw6whv',
 
-  // Сколько миллисекунд хранить каталог в кэше браузера (localStorage),
-  // чтобы не дёргать Apps Script при каждом открытии приложения.
   CATALOG_CACHE_TTL_MS: 10 * 60 * 1000, // 10 минут
 
   // Поддерживаемые языки интерфейса и язык по умолчанию.
