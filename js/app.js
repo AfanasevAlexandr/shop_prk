@@ -407,6 +407,11 @@ el.checkoutForm.addEventListener('submit', async e => {
     items,
     total: cart.getTotalPrice(state.products),
     currency: state.currencySymbol,
+    // Язык интерфейса каталога, который пользователь реально видел
+    // в момент оформления заказа (может отличаться от language_code
+    // ниже - тот отражает системный язык Telegram, а не выбор в самом
+    // приложении, если человек переключил его вручную кнопкой RU/SR).
+    app_language: getLanguage(),
     customer: {
       name: el.fieldName.value.trim(),
       phone: el.fieldPhone.value.trim(),
