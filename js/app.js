@@ -393,7 +393,10 @@ el.checkoutForm.addEventListener('submit', async e => {
       if (!product) return null;
       return {
         sku: product.sku,
-        name: product.name,
+        // Название на том языке, который пользователь видел в момент
+        // заказа - нужно для текста уведомления клиенту. Менеджер
+        // ориентируется по sku, поэтому язык названия ему не важен.
+        name: getLocalizedField(product, 'name'),
         qty,
         price: product.price,
         sum: cart.roundMoney(product.price * qty),
