@@ -14,7 +14,7 @@
   "checkout_title": "Poručivanje",
   "field_name": "Vaše ime",
   "field_phone": "Broj telefona",
-  "field_comment": "Komentar uz porudžbinu (opciono)",
+  "field_comment": "Komentar (na primer, kada vam odgovara da primite poziv)",
   "submit_order": "Potvrdi porudžbinu",
   "success_title": "Porudžbina je poslata",
   "success_text": "Menadžer će vas uskoro kontaktirati radi potvrde porudžbine.",
