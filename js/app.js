@@ -48,6 +48,9 @@ const el = {
   cartItems: document.getElementById('cart-items'),
   cartEmptyState: document.getElementById('cart-empty-state'),
   cartFooter: document.getElementById('cart-footer'),
+  cartDeliveryRow: document.getElementById('cart-delivery-row'),
+  cartDeliveryAmount: document.getElementById('cart-delivery-amount'),
+  cartDeliveryHint: document.getElementById('cart-delivery-hint'),
   cartTotalAmount: document.getElementById('cart-total-amount'),
   goToCheckout: document.getElementById('go-to-checkout'),
 
@@ -56,6 +59,9 @@ const el = {
   checkoutBack: document.getElementById('checkout-back'),
   checkoutForm: document.getElementById('checkout-form'),
   checkoutSummary: document.getElementById('checkout-summary'),
+  checkoutDeliveryRow: document.getElementById('checkout-delivery-row'),
+  checkoutDeliveryAmount: document.getElementById('checkout-delivery-amount'),
+  checkoutDeliveryHint: document.getElementById('checkout-delivery-hint'),
   checkoutTotalAmount: document.getElementById('checkout-total-amount'),
   fieldName: document.getElementById('field-name'),
   fieldPhone: document.getElementById('field-phone'),
@@ -149,6 +155,70 @@ function setViewState(view) {
   el.loadingState.hidden = view !== 'loading';
   el.errorState.hidden = view !== 'error';
   el.productGrid.hidden = view !== 'ready';
+}
+
+/**
+ * Достаёт числовое значение настройки из Settings, не завязываясь на
+ * текущий язык интерфейса - доставка и порог бесплатной доставки это
+ * числа, а не переводимый текст, поэтому переключение RU/SR не должно
+ * на них влиять. Берёт значение из колонки BASE_DATA_LANG, а если там
+ * пусто - первое непустое значение среди заполненных языков.
+ */
+function getSettingNumber(key, fallback) {
+  const entry = state.settings[key];
+  if (!entry) return fallback;
+
+  const preferred = entry[CONFIG.BASE_DATA_LANG];
+  const raw = preferred !== undefined && preferred !== '' ? preferred : Object.values(entry).find(v => v !== '' && v != null);
+
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+/**
+ * Считает стоимость доставки для указанной суммы товаров (без доставки).
+ * enabled = false, если delivery_price в Settings не задан/равен 0 -
+ * в этом случае блок доставки нигде не показывается (обратная
+ * совместимость с магазинами, где доставка ещё не настроена).
+ */
+function calcDelivery(subtotal) {
+  const deliveryPrice = getSettingNumber('delivery_price', 0);
+  if (!deliveryPrice || deliveryPrice <= 0) {
+    return { enabled: false, fee: 0, isFree: false, remaining: 0 };
+  }
+
+  const threshold = getSettingNumber('free_delivery_threshold', Infinity);
+  const isFree = subtotal >= threshold;
+
+  return {
+    enabled: true,
+    fee: isFree ? 0 : deliveryPrice,
+    isFree,
+    remaining: isFree || !Number.isFinite(threshold) ? 0 : cart.roundMoney(threshold - subtotal),
+  };
+}
+
+/** Отрисовывает строку доставки + подсказку в переданные элементы. Возвращает расчёт доставки. */
+function renderDeliveryInfo({ rowEl, amountEl, hintEl }, subtotal) {
+  const delivery = calcDelivery(subtotal);
+
+  if (!delivery.enabled) {
+    rowEl.hidden = true;
+    hintEl.hidden = true;
+    return delivery;
+  }
+
+  rowEl.hidden = false;
+  amountEl.textContent = delivery.isFree ? t('delivery_free') : `${formatPrice(delivery.fee)} ${state.currencySymbol}`;
+
+  if (!delivery.isFree && delivery.remaining > 0) {
+    hintEl.hidden = false;
+    hintEl.textContent = t('delivery_hint').replace('{amount}', `${formatPrice(delivery.remaining)} ${state.currencySymbol}`);
+  } else {
+    hintEl.hidden = true;
+  }
+
+  return delivery;
 }
 
 // ============================================================
@@ -314,11 +384,13 @@ el.productClose.addEventListener('click', () => closeOverlay(el.productOverlay))
 // ============================================================
 function updateCartBar() {
   const count = cart.getTotalItemsCount();
-  const total = cart.getTotalPrice(state.products);
+  const subtotal = cart.getTotalPrice(state.products);
+  const delivery = calcDelivery(subtotal);
+  const grandTotal = cart.roundMoney(subtotal + delivery.fee);
 
   el.cartBar.hidden = count === 0;
   el.cartBarCount.textContent = String(count);
-  el.cartBarTotal.textContent = `${formatPrice(total)} ${state.currencySymbol}`;
+  el.cartBarTotal.textContent = `${formatPrice(grandTotal)} ${state.currencySymbol}`;
 }
 
 function renderCartSheet() {
@@ -355,7 +427,12 @@ function renderCartSheet() {
     el.cartItems.appendChild(row);
   });
 
-  el.cartTotalAmount.textContent = `${formatPrice(cart.getTotalPrice(state.products))} ${state.currencySymbol}`;
+  const subtotal = cart.getTotalPrice(state.products);
+  const delivery = renderDeliveryInfo(
+    { rowEl: el.cartDeliveryRow, amountEl: el.cartDeliveryAmount, hintEl: el.cartDeliveryHint },
+    subtotal
+  );
+  el.cartTotalAmount.textContent = `${formatPrice(cart.roundMoney(subtotal + delivery.fee))} ${state.currencySymbol}`;
 }
 
 el.cartItems.addEventListener('click', e => {
@@ -407,7 +484,12 @@ function renderCheckoutSummary() {
     el.checkoutSummary.appendChild(row);
   });
 
-  el.checkoutTotalAmount.textContent = `${formatPrice(cart.getTotalPrice(state.products))} ${state.currencySymbol}`;
+  const subtotal = cart.getTotalPrice(state.products);
+  const delivery = renderDeliveryInfo(
+    { rowEl: el.checkoutDeliveryRow, amountEl: el.checkoutDeliveryAmount, hintEl: el.checkoutDeliveryHint },
+    subtotal
+  );
+  el.checkoutTotalAmount.textContent = `${formatPrice(cart.roundMoney(subtotal + delivery.fee))} ${state.currencySymbol}`;
 }
 
 el.checkoutForm.addEventListener('submit', async e => {
@@ -439,9 +521,16 @@ el.checkoutForm.addEventListener('submit', async e => {
 
   const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
 
+  const subtotal = cart.getTotalPrice(state.products);
+  const delivery = calcDelivery(subtotal);
+
   const order = {
     items,
-    total: cart.getTotalPrice(state.products),
+    // Сумма только товаров, без доставки.
+    subtotal,
+    delivery_fee: delivery.fee,
+    // Итог, который клиент реально должен заплатить (товары + доставка).
+    total: cart.roundMoney(subtotal + delivery.fee),
     currency: state.currencySymbol,
     // Язык интерфейса каталога, который пользователь реально видел
     // в момент оформления заказа (может отличаться от language_code
