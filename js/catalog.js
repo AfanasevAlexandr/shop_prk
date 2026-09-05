@@ -139,27 +139,53 @@ export function createProductCard(product, qty, currencySymbol) {
   price.className = 'product-card__price';
   price.innerHTML = `${formatPrice(product.price)} ${currencySymbol} <span class="product-card__unit">/ ${product.unit || ''}</span>`;
 
+  const stock = getStock(product);
+  const stockLabel = document.createElement('div');
+  stockLabel.className = 'product-card__stock';
+  if (stock <= 0) {
+    stockLabel.classList.add('is-out');
+    stockLabel.textContent = t('out_of_stock');
+  } else if (Number.isFinite(stock)) {
+    stockLabel.textContent = `${t('in_stock')}: ${stock}`;
+  }
+
+  if (stock <= 0) {
+    card.classList.add('is-out-of-stock');
+  }
+
   const controls = document.createElement('div');
   controls.className = 'product-card__controls';
-  renderCardControls(controls, qty);
+  renderCardControls(controls, qty, stock);
 
-  body.append(name, price, controls);
+  body.append(name, price);
+  if (stockLabel.textContent) body.append(stockLabel);
+  body.append(controls);
   card.append(imageWrap, body);
 
   return card;
 }
 
-/** Перерисовывает только блок +/- внутри уже существующей карточки. */
-export function renderCardControls(container, qty) {
+/** Перерисовывает только блок +/- внутри уже существующей карточки.
+ *  maxStock - доступный остаток (Infinity, если не ограничен). */
+export function renderCardControls(container, qty, maxStock = Infinity) {
   container.innerHTML = '';
 
+  if (maxStock <= 0) {
+    const outOfStock = document.createElement('div');
+    outOfStock.className = 'out-of-stock-badge';
+    outOfStock.textContent = t('out_of_stock');
+    container.appendChild(outOfStock);
+    return;
+  }
+
   if (qty > 0) {
+    const canIncrement = qty < maxStock;
     const stepper = document.createElement('div');
     stepper.className = 'qty-stepper';
     stepper.innerHTML = `
       <button type="button" data-action="decrement" aria-label="-">−</button>
       <span class="qty-stepper__value">${qty}</span>
-      <button type="button" data-action="increment" aria-label="+">+</button>
+      <button type="button" data-action="increment" aria-label="+" ${canIncrement ? '' : 'disabled'}>+</button>
     `;
     container.appendChild(stepper);
   } else {
@@ -180,4 +206,18 @@ function firstImage(imageUrlField) {
 export function formatPrice(value) {
   const num = Number(value) || 0;
   return num.toLocaleString('ru-RU');
+}
+
+/**
+ * Возвращает доступный остаток товара числом. Если колонка stock
+ * в таблице пустая или отсутствует - считаем количество неограниченным
+ * (Infinity), чтобы не ломать товары, для которых остаток пока
+ * не ведётся. Пустая строка / нечисловое значение трактуются так же.
+ */
+export function getStock(product) {
+  if (!product || product.stock === undefined || product.stock === null || product.stock === '') {
+    return Infinity;
+  }
+  const num = Number(product.stock);
+  return Number.isFinite(num) ? num : Infinity;
 }
