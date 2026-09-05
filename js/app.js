@@ -10,6 +10,7 @@ import {
   createProductCard,
   renderCardControls,
   formatPrice,
+  getStock,
 } from './catalog.js';
 
 // ---- Глобальное состояние приложения ----
@@ -58,6 +59,7 @@ const el = {
   checkoutTotalAmount: document.getElementById('checkout-total-amount'),
   fieldName: document.getElementById('field-name'),
   fieldPhone: document.getElementById('field-phone'),
+  fieldAddress: document.getElementById('field-address'),
   fieldComment: document.getElementById('field-comment'),
   submitOrderBtn: document.getElementById('submit-order-btn'),
 
@@ -114,6 +116,11 @@ async function loadCatalog() {
     state.products = data.products || [];
     state.settings = data.settings || {};
     state.categoryTree = buildCategoryTree(state.categories);
+
+    // Если товар закончился (или его стало меньше) с момента, когда
+    // пользователь положил его в корзину - подрезаем количество под
+    // реальный остаток, чтобы нельзя было заказать больше, чем есть.
+    cart.clampToStock(state.products);
 
     applySettingsToUI();
     setViewState('ready');
@@ -200,7 +207,17 @@ function refreshCardControls(sku) {
   const card = el.productGrid.querySelector(`.product-card[data-sku="${cssEscape(sku)}"]`);
   if (!card) return;
   const container = card.querySelector('.product-card__controls');
-  renderCardControls(container, cart.getQty(sku));
+  const product = state.products.find(p => p.sku === sku);
+  renderCardControls(container, cart.getQty(sku), getStock(product));
+}
+
+/** Увеличивает количество в корзине, не позволяя превысить остаток на складе. */
+function tryIncrement(sku) {
+  const product = state.products.find(p => p.sku === sku);
+  if (!product) return;
+  if (cart.getQty(sku) < getStock(product)) {
+    cart.increment(sku);
+  }
 }
 
 function cssEscape(value) {
@@ -217,7 +234,7 @@ el.productGrid.addEventListener('click', e => {
 
   if (actionBtn) {
     e.stopPropagation();
-    if (actionBtn.dataset.action === 'increment') cart.increment(sku);
+    if (actionBtn.dataset.action === 'increment') tryIncrement(sku);
     if (actionBtn.dataset.action === 'decrement') cart.decrement(sku);
     refreshCardControls(sku);
     return;
@@ -257,11 +274,23 @@ function openProductDetail(sku) {
   description.className = 'product-detail__description';
   description.textContent = getLocalizedField(product, 'description');
 
+  const stock = getStock(product);
+  const stockLabel = document.createElement('p');
+  stockLabel.className = 'product-detail__stock';
+  if (stock <= 0) {
+    stockLabel.classList.add('is-out');
+    stockLabel.textContent = t('out_of_stock');
+  } else if (Number.isFinite(stock)) {
+    stockLabel.textContent = `${t('in_stock')}: ${stock}`;
+  }
+
   const controls = document.createElement('div');
   controls.className = 'product-card__controls';
-  renderCardControls(controls, cart.getQty(sku));
+  renderCardControls(controls, cart.getQty(sku), stock);
 
-  el.productDetail.append(img, name, price, description, controls);
+  el.productDetail.append(img, name, price, description);
+  if (stockLabel.textContent) el.productDetail.append(stockLabel);
+  el.productDetail.append(controls);
   openOverlay(el.productOverlay);
 }
 
@@ -270,10 +299,11 @@ el.productDetail.addEventListener('click', e => {
   if (!actionBtn || !currentDetailSku) return;
 
   const sku = currentDetailSku;
-  if (actionBtn.dataset.action === 'increment') cart.increment(sku);
+  const product = state.products.find(p => p.sku === sku);
+  if (actionBtn.dataset.action === 'increment') tryIncrement(sku);
   if (actionBtn.dataset.action === 'decrement') cart.decrement(sku);
 
-  renderCardControls(el.productDetail.querySelector('.product-card__controls'), cart.getQty(sku));
+  renderCardControls(el.productDetail.querySelector('.product-card__controls'), cart.getQty(sku), getStock(product));
   refreshCardControls(sku);
 });
 
@@ -301,6 +331,9 @@ function renderCartSheet() {
     const product = state.products.find(p => p.sku === sku);
     if (!product) return;
 
+    const maxStock = getStock(product);
+    const canIncrement = qty < maxStock;
+
     const row = document.createElement('div');
     row.className = 'cart-item';
     row.innerHTML = `
@@ -312,7 +345,7 @@ function renderCartSheet() {
           <div class="qty-stepper">
             <button type="button" data-action="decrement" aria-label="-">−</button>
             <span class="qty-stepper__value">${qty}</span>
-            <button type="button" data-action="increment" aria-label="+">+</button>
+            <button type="button" data-action="increment" aria-label="+" ${canIncrement ? '' : 'disabled'}>+</button>
           </div>
         </div>
         <button type="button" class="cart-item__remove" data-action="remove">${t('remove')}</button>
@@ -331,7 +364,7 @@ el.cartItems.addEventListener('click', e => {
   const row = e.target.closest('.cart-item');
   const sku = row.dataset.sku;
 
-  if (btn.dataset.action === 'increment') cart.increment(sku);
+  if (btn.dataset.action === 'increment') tryIncrement(sku);
   if (btn.dataset.action === 'decrement') cart.decrement(sku);
   if (btn.dataset.action === 'remove') cart.removeItem(sku);
 
@@ -418,6 +451,7 @@ el.checkoutForm.addEventListener('submit', async e => {
     customer: {
       name: el.fieldName.value.trim(),
       phone: el.fieldPhone.value.trim(),
+      address: el.fieldAddress.value.trim(),
       comment: el.fieldComment.value.trim(),
     },
     telegram_user: tgUser
