@@ -1,4 +1,5 @@
 import { CONFIG } from './config.js';
+import { getStock } from './catalog.js';
 
 // Внутреннее состояние корзины: { [sku]: qty }
 let items = loadFromStorage();
@@ -98,6 +99,31 @@ function indexBySku(products) {
   const map = {};
   products.forEach(p => { map[p.sku] = p; });
   return map;
+}
+
+/**
+ * Приводит количество товаров в корзине в соответствие с текущим
+ * остатком на складе - вызывается сразу после загрузки/обновления
+ * каталога. Нужно на случай, если товар положили в корзину раньше
+ * (или в прошлом сеансе), а к моменту оформления заказа он уже
+ * закончился или его стало меньше. Возвращает true, если корзина
+ * была изменена (можно использовать, чтобы предупредить пользователя).
+ */
+export function clampToStock(products) {
+  const bySku = indexBySku(products);
+  let changed = false;
+
+  getEntries().forEach(({ sku, qty }) => {
+    const product = bySku[sku];
+    if (!product) return; // товар мог пропасть из каталога - не трогаем здесь
+    const stock = getStock(product);
+    if (Number.isFinite(stock) && qty > stock) {
+      setQty(sku, stock);
+      changed = true;
+    }
+  });
+
+  return changed;
 }
 
 function getState() {
