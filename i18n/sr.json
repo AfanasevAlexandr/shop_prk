@@ -14,7 +14,7 @@
   "checkout_title": "Poručivanje",
   "field_name": "Vaše ime",
   "field_phone": "Broj telefona",
-  "field_address": "Adresa dostave (opciono)",
+  "field_address": "Adresa dostave",
   "field_comment": "Komentar uz porudžbinu (opciono)",
   "submit_order": "Potvrdi porudžbinu",
   "success_title": "Porudžbina je poslata",
