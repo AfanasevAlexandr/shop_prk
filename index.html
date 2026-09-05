@@ -78,6 +78,11 @@
       </div>
 
       <div class="sheet__footer" id="cart-footer">
+        <div class="sheet__delivery" id="cart-delivery-row" hidden>
+          <span data-i18n="delivery_fee">Доставка</span>
+          <span id="cart-delivery-amount">0</span>
+        </div>
+        <p class="delivery-hint" id="cart-delivery-hint" hidden></p>
         <div class="sheet__total">
           <span data-i18n="total">Итого</span>
           <strong id="cart-total-amount">0</strong>
@@ -123,6 +128,11 @@
       </form>
 
       <div class="sheet__footer">
+        <div class="sheet__delivery" id="checkout-delivery-row" hidden>
+          <span data-i18n="delivery_fee">Доставка</span>
+          <span id="checkout-delivery-amount">0</span>
+        </div>
+        <p class="delivery-hint" id="checkout-delivery-hint" hidden></p>
         <div class="sheet__total">
           <span data-i18n="total">Итого</span>
           <strong id="checkout-total-amount">0</strong>
