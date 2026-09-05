@@ -445,6 +445,20 @@ button {
   margin-bottom: 10px;
 }
 
+.sheet__delivery {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: var(--tg-hint-color);
+  margin-bottom: 6px;
+}
+
+.delivery-hint {
+  font-size: 12px;
+  color: var(--tg-hint-color);
+  margin: 0 0 10px;
+}
+
 /* ============================================================
    СТРОКА ТОВАРА В КОРЗИНЕ
    ============================================================ */
